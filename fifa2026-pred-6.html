@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FIFA 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f0f2f5;color:#1a1a2e;font-family:system-ui,sans-serif;font-size:13px}
+header{background:linear-gradient(90deg,#c8102e,#002868 50%,#c8102e);padding:16px;text-align:center;position:relative;overflow:hidden}
+header::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,0.03) 0,rgba(255,255,255,0.03) 1px,transparent 1px,transparent 20px)}
+header h1{font-size:clamp(14px,4vw,22px);font-weight:900;color:#fff;letter-spacing:2px;text-transform:uppercase;text-shadow:0 2px 8px rgba(0,0,0,0.4);position:relative}
+header p{font-size:10px;color:rgba(255,255,255,0.75);margin-top:4px;letter-spacing:1px;position:relative}
+nav{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;padding:10px;background:#fff;border-bottom:2px solid #e0e0e0;position:sticky;top:0;z-index:20;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+nav button{padding:6px 13px;border-radius:20px;border:2px solid transparent;cursor:pointer;font-size:10px;font-weight:700;background:#f0f2f5;color:#666;transition:.2s}
+nav button.active{color:#fff}
+.tab{display:none}.tab.active{display:block}
+#app{padding:10px;max-width:700px;margin:0 auto}
+.card{background:#fff;border:1px solid #e0e6ef;border-radius:10px;padding:10px 12px;margin-bottom:6px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.bmatch{background:#fff;border:1px solid #dde3ef;border-radius:8px;margin:2px 3px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.bteam{display:flex;align-items:center;gap:4px;padding:5px 7px;font-size:10px;font-weight:600;color:#333;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:.1s}
+.bteam:last-of-type{border-bottom:none}
+.bteam:hover{background:#f0f4ff}
+.bteam.winner{background:#e8f5e9;color:#1b5e20;font-weight:800}
+.bteam.loser{opacity:0.4}
+.bteam .flag{font-size:13px;min-width:16px}
+.bteam .name{flex:1;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.match-info{font-size:9px;color:#333;padding:4px 8px;background:#e8f0fe;border-bottom:2px solid #c5d4f8;font-weight:700}
+.bracket-scroll{overflow-x:auto;padding-bottom:8px}
+.bracket{display:flex;gap:2px;align-items:flex-start}
+.rcol{display:flex;flex-direction:column;min-width:140px}
+.rtitle{text-align:center;font-size:8px;font-weight:900;color:#888;text-transform:uppercase;letter-spacing:1px;padding:5px 3px;background:#f8f9ff;border:1px solid #e0e6ef;border-radius:6px 6px 0 0;margin:0 3px}
+.rmatches{display:flex;flex-direction:column;gap:4px;padding:4px 0;justify-content:space-around;flex:1}
+</style>
+</head>
+<body>
+<header>
+  <div style="font-size:32px;position:relative">🏆</div>
+  <h1>FIFA World Cup 2026</h1>
+  <p>🇺🇸 USA · 🇲🇽 Meksiko · 🇨🇦 Kanada &nbsp;|&nbsp; 11. lipnja – 19. srpnja &nbsp;|&nbsp; 48 ekipa</p>
+</header>
+<nav>
+  <button class="active" onclick="showTab('pred',this)">⚽ Predikcije</button>
+  <button onclick="showTab('bracket',this)">🏆 Bracket</button>
+</nav>
+<div id="app">
+  <div id="pred" class="tab active"></div>
+  <div id="bracket" class="tab"></div>
+</div>
+<script>
+const Z=["Ovan","Bik","Blizanci","Rak","Lav","Djevica","Vaga","Škorpion","Strijelac","Jarac","Vodenjak","Ribe"];
+const ZS=["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"];
+const OF={0:200,1:50,2:-250,3:150,4:200,5:100,6:-200,7:-100,8:200,9:-150,10:250,11:-50};
+
+const PZ={
+  "Mexico":"Djevica","Czechia":"Škorpion","S.Korea":"Ribe","S.Africa":"Vodenjak",
+  "Canada":"Vodenjak","Bosnia":"Blizanci","Qatar":"Ribe","Switzerland":"Lav",
+  "Brazil":"Blizanci","Morocco":"Vodenjak","Scotland":"Ribe","Haiti":"Lav",
+  "USA":"Vaga","Türkiye":"Blizanci","Paraguay":"Lav","Australia":"Ribe",
+  "Germany":"Škorpion","Ecuador":"Vaga","Ivory Coast":"Lav","Curaçao":"Djevica",
+  "Netherlands":"Lav","Japan":"Djevica","Sweden":"Ribe","Tunisia":"Lav",
+  "Belgium":"Djevica","Egypt":"Bik","Iran":"Jarac","New Zealand":"Škorpion",
+  "Spain":"Bik","Uruguay":"Ribe","Saudi Arabia":"Škorpion","C.Verde":"Bik",
+  "France":"Jarac","Senegal":"Ribe","Iraq":"Rak","Norway":"Vodenjak",
+  "Argentina":"Ribe","Austria":"Bik","Algeria":"Ribe","Jordan":"Lav",
+  "Portugal":"Vaga","Colombia":"Blizanci","DR Congo":"Jarac","Uzbekistan":"Strijelac",
+  "England":"Strijelac","Croatia":"Djevica","Ghana":"Vodenjak","Panama":"Strijelac",
+};
+
+const MOON={
+  "0611":"Bik","0612":"Bik","0613":"Blizanci","0614":"Blizanci",
+  "0615":"Rak","0616":"Rak","0617":"Lav","0618":"Lav",
+  "0619":"Djevica","0620":"Djevica","0621":"Vaga","0622":"Vaga",
+  "0623":"Škorpion","0624":"Škorpion","0625":"Škorpion",
+  "0626":"Strijelac","0627":"Strijelac",
+  "0628":"Jarac","0629":"Jarac","0630":"Jarac",
+  "0701":"Vodenjak","0702":"Vodenjak","0703":"Ribe",
+  "0704":"Ribe","0705":"Ribe","0706":"Ovan","0707":"Ovan",
+  "0709":"Bik","0710":"Blizanci","0711":"Blizanci",
+  "0714":"Lav","0715":"Lav","0718":"Djevica","0719":"Vaga",
+};
+
+const GC={A:"#e63946",B:"#1565c0",C:"#2e7d32",D:"#e65100",E:"#6a1b9a",F:"#00838f",G:"#c62828",H:"#bf360c",I:"#283593",J:"#00695c",K:"#ad1457",L:"#37474f"};
+const GF={"Mexico":"🇲🇽","S.Africa":"🇿🇦","S.Korea":"🇰🇷","Czechia":"🇨🇿","Canada":"🇨🇦","Bosnia":"🇧🇦","Qatar":"🇶🇦","Switzerland":"🇨🇭","Brazil":"🇧🇷","Morocco":"🇲🇦","Haiti":"🇭🇹","Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","USA":"🇺🇸","Paraguay":"🇵🇾","Australia":"🇦🇺","Türkiye":"🇹🇷","Germany":"🇩🇪","Curaçao":"🇨🇼","Ivory Coast":"🇨🇮","Ecuador":"🇪🇨","Netherlands":"🇳🇱","Japan":"🇯🇵","Sweden":"🇸🇪","Tunisia":"🇹🇳","Belgium":"🇧🇪","Egypt":"🇪🇬","Iran":"🇮🇷","New Zealand":"🇳🇿","Spain":"🇪🇸","C.Verde":"🇨🇻","Saudi Arabia":"🇸🇦","Uruguay":"🇺🇾","France":"🇫🇷","Senegal":"🇸🇳","Iraq":"🇮🇶","Norway":"🇳🇴","Argentina":"🇦🇷","Algeria":"🇩🇿","Austria":"🇦🇹","Jordan":"🇯🇴","Portugal":"🇵🇹","DR Congo":"🇨🇩","Uzbekistan":"🇺🇿","Colombia":"🇨🇴","England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Croatia":"🇭🇷","Ghana":"🇬🇭","Panama":"🇵🇦"};
+
+const MS=`0611|Mexico|S.Africa|A
+0611|S.Korea|Czechia|A
+0612|Canada|Bosnia|B
+0612|USA|Paraguay|D
+0613|Qatar|Switzerland|B
+0613|Brazil|Morocco|C
+0613|Haiti|Scotland|C
+0613|Australia|Türkiye|D
+0614|Germany|Curaçao|E
+0614|Netherlands|Japan|F
+0614|Ivory Coast|Ecuador|E
+0614|Sweden|Tunisia|F
+0615|Spain|C.Verde|H
+0615|Belgium|Egypt|G
+0615|Saudi Arabia|Uruguay|H
+0615|Iran|New Zealand|G
+0616|France|Senegal|I
+0616|Iraq|Norway|I
+0616|Argentina|Algeria|J
+0616|Austria|Jordan|J
+0617|Portugal|DR Congo|K
+0617|England|Croatia|L
+0617|Ghana|Panama|L
+0617|Uzbekistan|Colombia|K
+0618|Czechia|S.Africa|A
+0618|Switzerland|Bosnia|B
+0618|Canada|Qatar|B
+0618|Mexico|S.Korea|A
+0619|Brazil|Haiti|C
+0619|Scotland|Morocco|C
+0619|USA|Australia|D
+0619|Türkiye|Paraguay|D
+0620|Netherlands|Sweden|F
+0620|Germany|Ivory Coast|E
+0620|Ecuador|Curaçao|E
+0620|Tunisia|Japan|F
+0621|Spain|Saudi Arabia|H
+0621|Belgium|Iran|G
+0621|Uruguay|C.Verde|H
+0621|New Zealand|Egypt|G
+0622|Argentina|Austria|J
+0622|France|Iraq|I
+0622|Norway|Senegal|I
+0622|Jordan|Algeria|J
+0623|Portugal|Uzbekistan|K
+0623|England|Ghana|L
+0623|Panama|Croatia|L
+0623|Colombia|DR Congo|K
+0624|Switzerland|Canada|B
+0624|Bosnia|Qatar|B
+0624|Scotland|Brazil|C
+0624|Morocco|Haiti|C
+0624|Czechia|Mexico|A
+0624|S.Africa|S.Korea|A
+0625|Ecuador|Germany|E
+0625|Curaçao|Ivory Coast|E
+0625|Japan|Sweden|F
+0625|Tunisia|Netherlands|F
+0625|Türkiye|USA|D
+0625|Paraguay|Australia|D
+0626|Norway|France|I
+0626|Senegal|Iraq|I
+0626|C.Verde|Saudi Arabia|H
+0626|Uruguay|Spain|H
+0626|Egypt|Iran|G
+0626|New Zealand|Belgium|G
+0627|Panama|England|L
+0627|Croatia|Ghana|L
+0627|Colombia|Portugal|K
+0627|DR Congo|Uzbekistan|K
+0627|Algeria|Austria|J
+0627|Jordan|Argentina|J`.trim().split("\n").map(r=>{const[d,h,a,g]=r.split("|");return{d,h,a,g};});
+
+// Knockout match info: date + venue
+const KO_INFO={
+  r32:[
+    {d:"0628",v:"Los Angeles"},{d:"0629",v:"Houston"},{d:"0629",v:"Boston"},{d:"0629",v:"Monterrey"},
+    {d:"0630",v:"Dallas"},{d:"0630",v:"NY New Jersey"},{d:"0701",v:"Philadelphia"},{d:"0701",v:"Atlanta"},
+    {d:"0702",v:"Seattle"},{d:"0702",v:"Kansas City"},{d:"0702",v:"Toronto"},{d:"0702",v:"SF Bay Area"},
+    {d:"0703",v:"Miami"},{d:"0703",v:"Vancouver"},{d:"0703",v:"Mexico City"},{d:"0703",v:"Guadalajara"},
+  ],
+  r16:[
+    {d:"0704",v:"Los Angeles"},{d:"0704",v:"NY New Jersey"},
+    {d:"0705",v:"Dallas"},{d:"0705",v:"Houston"},
+    {d:"0706",v:"Atlanta"},{d:"0706",v:"Philadelphia"},
+    {d:"0707",v:"Seattle"},{d:"0707",v:"Toronto"},
+  ],
+  qf:[
+    {d:"0709",v:"Los Angeles"},{d:"0710",v:"Dallas"},
+    {d:"0710",v:"Houston"},{d:"0711",v:"NY New Jersey"},
+  ],
+  sf:[
+    {d:"0714",v:"Atlanta"},{d:"0715",v:"NY New Jersey"},
+  ],
+  f3:[{d:"0718",v:"Miami"}],
+  f:[{d:"0719",v:"MetLife Stadium, NJ"}],
+};
+
+const GROUPS=["A","B","C","D","E","F","G","H","I","J","K","L"];
+const dl=d=>{
+  const m=d.slice(0,2),day=d.slice(2);
+  return`${parseInt(day)}.${parseInt(m)}.`;
+};
+let selG="A";
+
+function sc(a,b){const ai=Z.indexOf(a),bi=Z.indexOf(b);if(ai<0||bi<0)return 0;return OF[(bi-ai+12)%12]??0;}
+function calcP(h,a,d){
+  const hS=PZ[h],aS=PZ[a],mn=MOON[d];
+  if(!hS||!aS||!mn)return null;
+  const hm=sc(hS,mn),hv=sc(hS,aS),am=sc(aS,mn),av=sc(aS,hS);
+  const ht=hm+hv,at=am+av,diff=ht-at;
+  const hw=Math.max(5,Math.min(88,Math.round(50+diff*0.025)));
+  const aw=Math.max(5,Math.min(88,Math.round(50-diff*0.025)));
+  const dr=Math.max(3,100-hw-aw),tot=hw+aw+dr;
+  return{ht,at,hm,hv,am,av,diff,
+    hw:Math.round(hw*100/tot),aw:Math.round(aw*100/tot),dr:Math.round(dr*100/tot),
+    res:diff>=100?"Dom. pobjeđuje":diff<=-100?"Gost pobjeđuje":"Neriješeno",
+    rc:diff>=100?"#2e7d32":diff<=-100?"#c62828":"#e65100"};
+}
+const ds=n=>n>0?`+${n}`:`${n}`;
+const dc=n=>n>0?"#2e7d32":n<0?"#c62828":"#555";
+
+const standings={};
+GROUPS.forEach(g=>{standings[g]=[null,null,null,null];});
+
+let bracket={
+  r32:Array(16).fill(0).map(()=>({t1:null,t2:null,winner:null})),
+  r16:Array(8).fill(0).map(()=>({t1:null,t2:null,winner:null})),
+  qf: Array(4).fill(0).map(()=>({t1:null,t2:null,winner:null})),
+  sf: Array(2).fill(0).map(()=>({t1:null,t2:null,winner:null})),
+  f3:{t1:null,t2:null,winner:null},
+  f: {t1:null,t2:null,winner:null},
+};
+
+function seedBracket(){
+  const s=standings, r=bracket.r32;
+  const pairs=[
+    [s.A[0],s.B[1]],[s.C[0],s.D[1]],[s.E[0],s.F[1]],[s.G[0],s.H[1]],
+    [s.I[0],s.J[1]],[s.K[0],s.L[1]],[s.B[0],s.A[1]],[s.D[0],s.C[1]],
+    [s.F[0],s.E[1]],[s.H[0],s.G[1]],[s.J[0],s.I[1]],[s.L[0],s.K[1]],
+    [s.A[2],s.B[2]],[s.C[2],s.D[2]],[s.E[2],s.F[2]],[s.G[2],s.H[2]],
+  ];
+  pairs.forEach(([t1,t2],i)=>{
+    r[i].t1=t1||null; r[i].t2=t2||null;
+    if(r[i].winner&&r[i].winner!==t1&&r[i].winner!==t2) r[i].winner=null;
+  });
+  propagate();
+}
+
+function propagate(){
+  for(let i=0;i<8;i++){
+    bracket.r16[i].t1=bracket.r32[i*2].winner||null;
+    bracket.r16[i].t2=bracket.r32[i*2+1].winner||null;
+    if(bracket.r16[i].winner&&bracket.r16[i].winner!==bracket.r16[i].t1&&bracket.r16[i].winner!==bracket.r16[i].t2) bracket.r16[i].winner=null;
+  }
+  for(let i=0;i<4;i++){
+    bracket.qf[i].t1=bracket.r16[i*2].winner||null;
+    bracket.qf[i].t2=bracket.r16[i*2+1].winner||null;
+    if(bracket.qf[i].winner&&bracket.qf[i].winner!==bracket.qf[i].t1&&bracket.qf[i].winner!==bracket.qf[i].t2) bracket.qf[i].winner=null;
+  }
+  for(let i=0;i<2;i++){
+    bracket.sf[i].t1=bracket.qf[i*2].winner||null;
+    bracket.sf[i].t2=bracket.qf[i*2+1].winner||null;
+    if(bracket.sf[i].winner&&bracket.sf[i].winner!==bracket.sf[i].t1&&bracket.sf[i].winner!==bracket.sf[i].t2) bracket.sf[i].winner=null;
+  }
+  const l0=bracket.sf[0].winner?(bracket.sf[0].winner===bracket.sf[0].t1?bracket.sf[0].t2:bracket.sf[0].t1):null;
+  const l1=bracket.sf[1].winner?(bracket.sf[1].winner===bracket.sf[1].t1?bracket.sf[1].t2:bracket.sf[1].t1):null;
+  bracket.f3.t1=l0; bracket.f3.t2=l1;
+  if(bracket.f3.winner&&bracket.f3.winner!==l0&&bracket.f3.winner!==l1) bracket.f3.winner=null;
+  bracket.f.t1=bracket.sf[0].winner||null;
+  bracket.f.t2=bracket.sf[1].winner||null;
+  if(bracket.f.winner&&bracket.f.winner!==bracket.f.t1&&bracket.f.winner!==bracket.f.t2) bracket.f.winner=null;
+}
+
+function setWinner(round,idx,team){
+  if(round==='r32') bracket.r32[idx].winner=team;
+  else if(round==='r16') bracket.r16[idx].winner=team;
+  else if(round==='qf') bracket.qf[idx].winner=team;
+  else if(round==='sf') bracket.sf[idx].winner=team;
+  else if(round==='f3') bracket.f3.winner=team;
+  else if(round==='f') bracket.f.winner=team;
+  propagate();
+  renderBracket();
+}
+
+function predBadge(t1,t2,d){
+  if(!t1||!t2||!d) return "";
+  const p=calcP(t1,t2,d);
+  if(!p) return "";
+  const col=p.diff>0?"#2e7d32":p.diff<0?"#c62828":"#888";
+  const mn=MOON[d];
+  const mzi=Z.indexOf(mn);
+  return`<div style="display:flex;align-items:center;justify-content:space-between;padding:2px 6px;background:#f8f9ff;font-size:8px;color:#888">
+    <span>${mn?ZS[mzi]+"":""} 🌙</span>
+    <span style="font-weight:900;color:${col}">${ds(p.diff)}</span>
+    <span style="color:${p.rc}">${p.hw}%·${p.dr}%·${p.aw}%</span>
+  </div>`;
+}
+
+function teamEl(team,winner,round,idx){
+  if(!team) return`<div class="bteam" style="color:#ccc;font-style:italic"><span class="flag">?</span><span class="name">TBD</span></div>`;
+  const isW=winner===team, isL=winner&&winner!==team;
+  return`<div class="bteam${isW?" winner":isL?" loser":""}" onclick="setWinner('${round}',${idx},'${team}')">
+    <span class="flag">${GF[team]||"🏳"}</span>
+    <span class="name">${team}</span>
+    ${isW?'<span style="color:#2e7d32;font-size:10px">✓</span>':''}
+  </div>`;
+}
+
+function matchEl(m,round,idx,info){
+  const d=info?info.d:null;
+  const v=info?info.v:"";
+  const mn=d?MOON[d]:"";
+  const mzi=Z.indexOf(mn);
+  const p=(m.t1&&m.t2&&d)?calcP(m.t1,m.t2,d):null;
+  const diffCol=p?(p.diff>0?"#2e7d32":p.diff<0?"#c62828":"#888"):"#888";
+  return`<div class="bmatch">
+    <div class="match-info" style="display:flex;justify-content:space-between;align-items:center">
+      <span>📅 ${d?dl(d):""} · 📍${v}</span>
+      ${mn?`<span style="color:#1565c0;font-weight:800">🌙 ${mn} ${ZS[mzi]}</span>`:""}
+    </div>
+    ${p?`<div style="text-align:center;padding:2px 6px;background:${p.diff>0?"#e8f5e9":p.diff<0?"#ffebee":"#f5f5f5"};font-size:9px;font-weight:900;color:${diffCol}">${ds(p.diff)} pts · ${p.hw}% / ${p.dr}% / ${p.aw}%</div>`:""}
+    ${teamEl(m.t1,m.winner,round,idx)}
+    ${teamEl(m.t2,m.winner,round,idx)}
+  </div>`;
+}
+
+function matchCard(m){
+  const p=calcP(m.h,m.a,m.d);
+  const hS=PZ[m.h]||"?",aS=PZ[m.a]||"?",mn=MOON[m.d]||"?";
+  const hc=GC[m.g]||"#888";
+  const hzi=Z.indexOf(hS),azi=Z.indexOf(aS),mzi=Z.indexOf(mn);
+  let predHTML="";
+  if(p){
+    const bg=p.diff>0?"rgba(46,125,50,0.08)":p.diff<0?"rgba(198,40,40,0.08)":"rgba(0,0,0,0.03)";
+    const bd=p.diff>0?"rgba(46,125,50,0.25)":p.diff<0?"rgba(198,40,40,0.25)":"rgba(0,0,0,0.1)";
+    predHTML=`<div style="margin-top:7px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:8px;background:${bg};border:1px solid ${bd}">
+        <div style="text-align:left"><div style="font-size:8px;color:#999">🌙${ds(p.hm)} ⚔️${ds(p.hv)}</div><div style="font-size:13px;font-weight:900;color:${dc(p.ht)}">${ds(p.ht)}</div></div>
+        <div style="text-align:center"><div style="font-size:20px;font-weight:900;color:${dc(p.diff)}">${ds(p.diff)}</div><div style="font-size:9px;color:${p.rc};font-weight:700">${p.res}</div></div>
+        <div style="text-align:right"><div style="font-size:8px;color:#999">🌙${ds(p.am)} ⚔️${ds(p.av)}</div><div style="font-size:13px;font-weight:900;color:${dc(p.at)}">${ds(p.at)}</div></div>
+      </div>
+      <div style="display:flex;gap:1px;height:4px;border-radius:3px;overflow:hidden;margin-top:5px">
+        <div style="width:${p.hw}%;background:#4caf50"></div><div style="width:${p.dr}%;background:#ccc"></div><div style="width:${p.aw}%;background:#ef5350"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;margin-top:2px">
+        <span style="color:#2e7d32;font-weight:700">${p.hw}%</span><span style="color:#888">Ner. ${p.dr}%</span><span style="color:#c62828;font-weight:700">${p.aw}%</span>
+      </div>
+    </div>`;
+  }
+  return`<div class="card" style="border-left:4px solid ${hc}">
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:#888;margin-bottom:5px">
+      <span style="color:${hc};font-weight:700">${dl(m.d)}</span><span>🌙 ${mn} ${mzi>=0?ZS[mzi]:""}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div style="flex:1;text-align:right">
+        <div style="font-size:12px;font-weight:700">${GF[m.h]||""} ${m.h}</div>
+        <div style="font-size:9px;color:#7c4dff">${hzi>=0?ZS[hzi]:""} ${hS}</div>
+      </div>
+      <span style="color:#bbb;font-size:10px;font-weight:700">VS</span>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700">${m.a} ${GF[m.a]||""}</div>
+        <div style="font-size:9px;color:#7c4dff">${aS} ${azi>=0?ZS[azi]:""}</div>
+      </div>
+    </div>
+    ${predHTML}
+  </div>`;
+}
+
+function renderPred(){
+  const el=document.getElementById("pred");
+  const gms=MS.filter(m=>m.g===selG);
+  const gc=GC[selG];
+  const teams=[...new Set(gms.flatMap(m=>[m.h,m.a]))];
+  const teamsHTML=teams.map(t=>`<div style="padding:7px 10px;background:#f8f9ff;border:1px solid #e8eaf6;border-radius:8px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:600">${GF[t]||""} ${t}</span><span style="font-size:10px;color:#7c4dff;font-weight:600">${ZS[Z.indexOf(PZ[t])]||""} ${PZ[t]||"?"}</span></div>`).join("");
+  const gnavHTML=GROUPS.map(g=>`<button onclick="selG='${g}';renderPred()" style="padding:5px 10px;border-radius:18px;border:2px solid ${g===selG?GC[g]:"transparent"};background:${g===selG?GC[g]:"#f0f2f5"};color:${g===selG?"#fff":"#555"};font-size:10px;font-weight:700;cursor:pointer">Gr.${g}</button>`).join("");
+  el.innerHTML=`
+    <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:10px">${gnavHTML}</div>
+    <div style="background:${gc}0d;border:1px solid ${gc}30;border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="font-weight:900;color:${gc};font-size:14px;letter-spacing:2px;margin-bottom:8px">GRUPA ${selG}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">${teamsHTML}</div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:#888;margin-bottom:7px;text-transform:uppercase;letter-spacing:1px">Utakmice</div>
+    ${gms.map(matchCard).join("")}`;
+}
+
+function renderBracket(){
+  const el=document.getElementById("bracket");
+  // Standings picker
+  let sHTML=`
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+      <button onclick="autoSimulate()" style="padding:9px 20px;border-radius:22px;border:none;background:linear-gradient(135deg,#1565c0,#0d47a1);color:#fff;font-weight:900;font-size:12px;cursor:pointer;box-shadow:0 2px 8px rgba(21,101,192,0.4)">🔮 Auto Simulacija</button>
+      <button onclick="resetBracket()" style="padding:9px 16px;border-radius:22px;border:none;background:#ef5350;color:#fff;font-weight:700;font-size:11px;cursor:pointer">🔄 Reset</button>
+      <span style="font-size:10px;color:#888">Auto simulacija koristi astrološku formulu za sve mečeve</span>
+    </div>
+    <div id="auto-summary"></div>
+    <div style="margin-bottom:14px">
+    <div style="font-size:13px;font-weight:900;color:#333;margin-bottom:4px">📋 Poredak grupa → Bracket</div>
+    <div style="font-size:10px;color:#888;margin-bottom:8px">Klikni ekipe po redu: 1. → 2. → 3. mjesto</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">`;
+  for(const g of GROUPS){
+    const gc=GC[g];
+    const gms=MS.filter(m=>m.g===g);
+    const teams=[...new Set(gms.flatMap(m=>[m.h,m.a]))];
+    const labels=["🥇","🥈","🥉","4️⃣"];
+    const cols=["#ffd700","#90caf9","#a5d6a7","#eee"];
+    const bgs=["#fffde7","#e3f2fd","#e8f5e9","#fafafa"];
+    sHTML+=`<div style="background:#fff;border:1px solid ${gc}40;border-radius:9px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+      <div style="background:${gc};color:#fff;font-size:10px;font-weight:900;padding:4px 8px">GRUPA ${g}</div>`;
+    teams.forEach(t=>{
+      const pos=standings[g].indexOf(t);
+      const sel=pos>=0;
+      sHTML+=`<div onclick="toggleStanding('${g}','${t}')" style="display:flex;align-items:center;gap:5px;padding:4px 7px;cursor:pointer;border-bottom:1px solid #f5f5f5;background:${sel?bgs[pos]:"#fff"}">
+        <div style="width:18px;height:18px;border-radius:50%;background:${sel?cols[pos]:"#eee"};display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0">${sel?labels[pos]:""}</div>
+        <span style="font-size:10px;font-weight:${sel?700:400}">${GF[t]||""} ${t}</span>
+      </div>`;
+    });
+    sHTML+="</div>";
+  }
+  sHTML+="</div></div>";
+
+  // Bracket
+  const rounds=[
+    {key:"r32",title:"R32 · Osmina finala",arr:bracket.r32,info:KO_INFO.r32},
+    {key:"r16",title:"R16 · Šesnaestina",arr:bracket.r16,info:KO_INFO.r16},
+    {key:"qf", title:"Četvrtfinale",arr:bracket.qf,info:KO_INFO.qf},
+    {key:"sf", title:"Polufinale",arr:bracket.sf,info:KO_INFO.sf},
+  ];
+
+  let bHTML=`<div style="font-size:13px;font-weight:900;color:#333;margin-bottom:6px">🏆 Bracket Simulator <span style="font-size:10px;font-weight:400;color:#888">— klikni ekipu = pobjednik</span></div>
+  <div class="bracket-scroll"><div class="bracket">`;
+
+  for(const r of rounds){
+    bHTML+=`<div class="rcol"><div class="rtitle">${r.title}</div><div class="rmatches">`;
+    r.arr.forEach((m,i)=>{ bHTML+=matchEl(m,r.key,i,r.info[i]||null); });
+    bHTML+=`</div></div>`;
+  }
+
+  // Final col
+  bHTML+=`<div class="rcol" style="min-width:148px">
+    <div class="rtitle" style="background:#fff9e6;color:#b8860b;border-color:#ffd70066">🥉 3. mjesto + 🏆 Finale</div>
+    <div class="rmatches" style="justify-content:space-evenly">
+      <div>
+        <div style="font-size:8px;font-weight:700;color:#888;margin:2px 4px">Za 3. mjesto · 18.7. · Miami · 🌙${ZS[Z.indexOf(MOON["0718"]||"")]||""}</div>
+        ${matchEl(bracket.f3,'f3',0,KO_INFO.f3[0])}
+      </div>
+      <div>
+        <div style="font-size:8px;font-weight:700;color:#b8860b;margin:2px 4px">🏆 Finale · 19.7. · MetLife NJ · 🌙${ZS[Z.indexOf(MOON["0719"]||"")]||""}</div>
+        ${matchEl(bracket.f,'f',0,KO_INFO.f[0])}
+        ${bracket.f.winner?`<div style="text-align:center;padding:6px;font-size:11px;font-weight:900;color:#b8860b;background:#fffde7;border-radius:0 0 7px 7px">🏆 ${GF[bracket.f.winner]||""} ${bracket.f.winner}</div>`:""}
+      </div>
+    </div>
+  </div>`;
+
+  bHTML+=`</div></div>
+`;
+
+  el.innerHTML=sHTML+bHTML;
+}
+
+function toggleStanding(g,team){
+  const arr=standings[g];
+  const idx=arr.indexOf(team);
+  if(idx>=0){ arr[idx]=null; }
+  else{ const free=arr.indexOf(null); if(free>=0) arr[free]=team; }
+  seedBracket();
+  renderBracket();
+}
+
+function resetBracket(){
+  GROUPS.forEach(g=>{standings[g]=[null,null,null,null];});
+  bracket={
+    r32:Array(16).fill(0).map(()=>({t1:null,t2:null,winner:null})),
+    r16:Array(8).fill(0).map(()=>({t1:null,t2:null,winner:null})),
+    qf: Array(4).fill(0).map(()=>({t1:null,t2:null,winner:null})),
+    sf: Array(2).fill(0).map(()=>({t1:null,t2:null,winner:null})),
+    f3:{t1:null,t2:null,winner:null},
+    f: {t1:null,t2:null,winner:null},
+  };
+  renderBracket();
+}
+
+function showTab(id,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='pred') renderPred();
+  else renderBracket();
+}
+
+renderPred();
+
+// ── AUTO BRACKET ──
+function autoSimulate(){
+  // 1. Calculate group standings from match predictions
+  const pts={}, gd={}, gf={};
+  GROUPS.forEach(g=>{
+    const teams=[...new Set(MS.filter(m=>m.g===g).flatMap(m=>[m.h,m.a]))];
+    teams.forEach(t=>{ pts[t]=0; gd[t]=0; gf[t]=0; });
+  });
+
+  MS.forEach(m=>{
+    const p=calcP(m.h,m.a,m.d);
+    if(!p) return;
+    const diff=p.diff;
+    if(diff>=100){ pts[m.h]+=3; gf[m.h]+=2; gf[m.a]+=0; gd[m.h]+=2; gd[m.a]-=2; }
+    else if(diff<=-100){ pts[m.a]+=3; gf[m.a]+=2; gf[m.h]+=0; gd[m.a]+=2; gd[m.h]-=2; }
+    else { pts[m.h]+=1; pts[m.a]+=1; gf[m.h]+=1; gf[m.a]+=1; }
+  });
+
+  // Sort each group
+  GROUPS.forEach(g=>{
+    const teams=[...new Set(MS.filter(m=>m.g===g).flatMap(m=>[m.h,m.a]))];
+    teams.sort((a,b)=>(pts[b]-pts[a])||(gd[b]-gd[a])||(gf[b]-gf[a]));
+    standings[g]=[teams[0]||null,teams[1]||null,teams[2]||null,teams[3]||null];
+  });
+
+  // 2. Seed bracket
+  seedBracket();
+
+  // 3. Simulate each round
+  function simMatch(m, d){
+    if(!m.t1||!m.t2) return;
+    const p=calcP(m.t1,m.t2,d);
+    if(!p){ m.winner=Math.random()<0.5?m.t1:m.t2; return; }
+    const diff=p.diff;
+    if(diff>=100) m.winner=m.t1;
+    else if(diff<=-100) m.winner=m.t2;
+    else m.winner=Math.random()<0.5?m.t1:m.t2; // penalties - neriješeno
+  }
+
+  bracket.r32.forEach((m,i)=>simMatch(m, KO_INFO.r32[i].d));
+  propagate();
+  bracket.r16.forEach((m,i)=>simMatch(m, KO_INFO.r16[i].d));
+  propagate();
+  bracket.qf.forEach((m,i)=>simMatch(m, KO_INFO.qf[i].d));
+  propagate();
+  bracket.sf.forEach((m,i)=>simMatch(m, KO_INFO.sf[i].d));
+  propagate();
+  simMatch(bracket.f3, KO_INFO.f3[0].d);
+  simMatch(bracket.f, KO_INFO.f[0].d);
+
+  renderBracket();
+
+  // Show group standings summary
+  showStandingsSummary(pts, gd);
+}
+
+function showStandingsSummary(pts, gd){
+  const el=document.getElementById("auto-summary");
+  if(!el) return;
+  let html=`<div style="margin-bottom:14px">
+    <div style="font-size:13px;font-weight:900;color:#333;margin-bottom:8px">📊 Automatski izračunati poredak grupa</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">`;
+  for(const g of GROUPS){
+    const gc=GC[g];
+    html+=`<div style="background:#fff;border:1px solid ${gc}40;border-radius:9px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+      <div style="background:${gc};color:#fff;font-size:10px;font-weight:900;padding:4px 8px">GRUPA ${g}</div>`;
+    const labels=["🥇","🥈","🥉","4️⃣"];
+    standings[g].forEach((t,i)=>{
+      if(!t) return;
+      html+=`<div style="display:flex;align-items:center;gap:5px;padding:4px 7px;border-bottom:1px solid #f5f5f5;background:${i===0?"#fffde7":i===1?"#e3f2fd":i===2?"#e8f5e9":"#fff"}">
+        <span style="font-size:10px">${labels[i]}</span>
+        <span style="font-size:10px;font-weight:700;flex:1">${GF[t]||""} ${t}</span>
+        <span style="font-size:9px;color:#666">${pts[t]}pt</span>
+      </div>`;
+    });
+    html+="</div>";
+  }
+  html+="</div></div>";
+  el.innerHTML=html;
+}
+
+</script>
+</body>
+</html>
